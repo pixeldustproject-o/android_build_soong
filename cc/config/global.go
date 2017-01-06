@@ -32,6 +32,10 @@ var (
 		"-Wno-unused",
 		"-Winit-self",
 		"-Wpointer-arith",
+		"-Wno-address-of-packed-member",
+		"-Wno-main",
+		"-Wno-instantiation-after-specialization",
+		"-Wno-max-unsigned-zero",
 
 		// COMMON_RELEASE_CFLAGS
 		"-DNDEBUG",
