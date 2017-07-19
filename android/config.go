@@ -501,3 +501,7 @@ func (c *deviceConfig) CoverageEnabledForPath(path string) bool {
 	}
 	return coverage
 }
+
+func (c *deviceConfig) BoardUsesQTIHardware() bool {
+	return Bool(c.config.ProductVariables.BoardUsesQTIHardware)
+}
