@@ -183,6 +183,8 @@ type productVariables struct {
 	Override_rs_driver *string `json:",omitempty"`
 
 	DeviceKernelHeaders []string `json:",omitempty"`
+
+	BoardUsesQTIHardware *bool `json:",omitempty"`
 }
 
 func boolPtr(v bool) *bool {
@@ -214,6 +216,7 @@ func (v *productVariables) SetDefaultConfig() {
 		DeviceSecondaryAbi:         &[]string{"armeabi-v7a"},
 		Malloc_not_svelte:          boolPtr(false),
 		Safestack:                  boolPtr(false),
+		BoardUsesQTIHardware:      boolPtr(false),
 	}
 
 	if runtime.GOOS == "linux" {
