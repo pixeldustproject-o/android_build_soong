@@ -140,6 +140,7 @@ type productVariables struct {
 	Device_uses_hwc2           *bool `json:",omitempty"`
 	Treble                     *bool `json:",omitempty"`
 	Pdk                        *bool `json:",omitempty"`
+	Libart_img_base            *string `json:",omitempty"`
 
 	IntegerOverflowExcludePaths *[]string `json:",omitempty"`
 
