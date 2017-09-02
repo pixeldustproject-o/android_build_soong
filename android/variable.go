@@ -186,6 +186,10 @@ type productVariables struct {
 
 	BoardUsesQTIHardware *bool `json:",omitempty"`
 
+	BoardUsesQCOMHardware *bool `json:",omitempty"`
+
+	TargetUsesQCOMBsp *bool `json:",omitempty"`
+
 	// Pathmap variables
 	QTIAudioPath *string `json:",omitempty"`
 	QTIDisplayPath *string `json:",omitempty"`
