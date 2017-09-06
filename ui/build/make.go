@@ -107,6 +107,7 @@ func runMakeProductConfig(ctx Context, config Config) {
 		"HOST_BUILD_TYPE",
 		"OUT_DIR",
 		"PLATFORM_VERSION",
+                "PIXELDUST_VERSION",
 		"TARGET_PRODUCT",
 		"TARGET_BUILD_VARIANT",
 		"TARGET_BUILD_TYPE",
