@@ -74,6 +74,7 @@ type Deps struct {
 	ReexportGeneratedHeaders []string
 
 	CrtBegin, CrtEnd string
+	LinkerScript     string
 }
 
 type PathDeps struct {
@@ -98,6 +99,7 @@ type PathDeps struct {
 
 	// Paths to crt*.o files
 	CrtBegin, CrtEnd android.OptionalPath
+	LinkerScript     android.OptionalPath
 }
 
 type Flags struct {
@@ -141,6 +143,9 @@ type Flags struct {
 type ObjectLinkerProperties struct {
 	// names of other cc_object modules to link into this module using partial linking
 	Objs []string `android:"arch_variant"`
+
+	// if set, add an extra objcopy --prefix-symbols= step
+	Prefix_symbols string
 }
 
 // Properties used to compile all C or C++ modules
@@ -151,28 +156,31 @@ type BaseProperties struct {
 	// Minimum sdk version supported when compiling against the ndk
 	Sdk_version string
 
-	// don't insert default compiler flags into asflags, cflags,
-	// cppflags, conlyflags, ldflags, or include_dirs
-	No_default_compiler_flags *bool
+	AndroidMkSharedLibs []string `blueprint:"mutated"`
+	HideFromMake        bool     `blueprint:"mutated"`
+	PreventInstall      bool     `blueprint:"mutated"`
 
-	// whether this module should be allowed to install onto /vendor as
-	// well as /system. The two variants will be built separately, one
-	// like normal, and the other limited to the set of libraries and
-	// headers that are exposed to /vendor modules.
+	UseVndk bool `blueprint:"mutated"`
+}
+
+type VendorProperties struct {
+	// whether this module should be allowed to be directly depended by other
+	// modules with `vendor: true`, `proprietary: true`, or `vendor_available:true`.
+	// If set to true, two variants will be built separately, one like
+	// normal, and the other limited to the set of libraries and headers
+	// that are exposed to /vendor modules.
 	//
 	// The vendor variant may be used with a different (newer) /system,
 	// so it shouldn't have any unversioned runtime dependencies, or
 	// make assumptions about the system that may not be true in the
 	// future.
 	//
+	// If set to false, this module becomes inaccessible from /vendor modules.
+	//
+	// Default value is true when vndk: {enabled: true} or vendor: true.
+	//
 	// Nothing happens if BOARD_VNDK_VERSION isn't set in the BoardConfig.mk
 	Vendor_available *bool
-
-	AndroidMkSharedLibs []string `blueprint:"mutated"`
-	HideFromMake        bool     `blueprint:"mutated"`
-	PreventInstall      bool     `blueprint:"mutated"`
-
-	UseVndk bool `blueprint:"mutated"`
 }
 
 type UnusedProperties struct {
@@ -184,7 +192,6 @@ type ModuleContextIntf interface {
 	staticBinary() bool
 	clang() bool
 	toolchain() config.Toolchain
-	noDefaultCompilerFlags() bool
 	sdk() bool
 	sdkVersion() string
 	vndk() bool
@@ -270,6 +277,7 @@ var (
 	objDepTag             = dependencyTag{name: "obj"}
 	crtBeginDepTag        = dependencyTag{name: "crtbegin"}
 	crtEndDepTag          = dependencyTag{name: "crtend"}
+	linkerScriptDepTag    = dependencyTag{name: "linker script"}
 	reuseObjTag           = dependencyTag{name: "reuse objects"}
 	ndkStubDepTag         = dependencyTag{name: "ndk stub", library: true}
 	ndkLateStubDepTag     = dependencyTag{name: "ndk late stub", library: true}
@@ -282,8 +290,9 @@ type Module struct {
 	android.ModuleBase
 	android.DefaultableModuleBase
 
-	Properties BaseProperties
-	unused     UnusedProperties
+	Properties       BaseProperties
+	VendorProperties VendorProperties
+	unused           UnusedProperties
 
 	// initialize before calling Init
 	hod      android.HostOrDeviceSupported
@@ -314,7 +323,7 @@ type Module struct {
 }
 
 func (c *Module) Init() android.Module {
-	c.AddProperties(&c.Properties, &c.unused)
+	c.AddProperties(&c.Properties, &c.VendorProperties, &c.unused)
 	if c.compiler != nil {
 		c.AddProperties(c.compiler.compilerProps()...)
 	}
@@ -375,6 +384,12 @@ func (c *Module) isVndk() bool {
 	return false
 }
 
+// Returns true only when this module is configured to have core and vendor
+// variants.
+func (c *Module) hasVendorVariant() bool {
+	return c.isVndk() || Bool(c.VendorProperties.Vendor_available)
+}
+
 type baseModuleContext struct {
 	android.BaseContext
 	moduleContextImpl
@@ -425,10 +440,6 @@ func (ctx *moduleContextImpl) staticBinary() bool {
 		return static.staticBinary()
 	}
 	return false
-}
-
-func (ctx *moduleContextImpl) noDefaultCompilerFlags() bool {
-	return Bool(ctx.mod.Properties.No_default_compiler_flags)
 }
 
 func (ctx *moduleContextImpl) sdk() bool {
@@ -830,6 +841,9 @@ func (c *Module) DepsMutator(actx android.BottomUpMutatorContext) {
 	if deps.CrtEnd != "" {
 		actx.AddDependency(c, crtEndDepTag, deps.CrtEnd)
 	}
+	if deps.LinkerScript != "" {
+		actx.AddDependency(c, linkerScriptDepTag, deps.LinkerScript)
+	}
 
 	version := ctx.sdkVersion()
 	actx.AddVariationDependencies([]blueprint.Variation{
@@ -984,6 +998,17 @@ func (c *Module) depsToPaths(ctx android.ModuleContext) PathDeps {
 				} else {
 					ctx.ModuleErrorf("module %q is not a genrule", name)
 				}
+			case linkerScriptDepTag:
+				if genRule, ok := m.(genrule.SourceFileGenerator); ok {
+					files := genRule.GeneratedSourceFiles()
+					if len(files) == 1 {
+						depPaths.LinkerScript = android.OptionalPathForPath(files[0])
+					} else if len(files) > 1 {
+						ctx.ModuleErrorf("module %q can only generate a single file if used for a linker script", name)
+					}
+				} else {
+					ctx.ModuleErrorf("module %q is not a genrule", name)
+				}
 			default:
 				ctx.ModuleErrorf("depends on non-cc module %q", name)
 			}
@@ -1121,7 +1146,7 @@ func (c *Module) depsToPaths(ctx android.ModuleContext) PathDeps {
 
 		// Export the shared libs to the make world. In doing so, .vendor suffix
 		// is added if the lib has both core and vendor variants and this module
-		// is building against vndk. This is because the vendor variant will be
+		// is building against vndk. This is because the vendor variant will
 		// have .vendor suffix in its name in the make world. However, if the
 		// lib is a vendor-only lib or this lib is not building against vndk,
 		// then the suffix is not added.
@@ -1130,7 +1155,7 @@ func (c *Module) depsToPaths(ctx android.ModuleContext) PathDeps {
 			libName := strings.TrimSuffix(name, llndkLibrarySuffix)
 			libName = strings.TrimPrefix(libName, "prebuilt_")
 			isLLndk := inList(libName, llndkLibraries)
-			if c.vndk() && (Bool(cc.Properties.Vendor_available) || isLLndk) {
+			if c.vndk() && (cc.hasVendorVariant() || isLLndk) {
 				libName += vendorSuffix
 			}
 			// Note: the order of libs in this list is not important because
@@ -1170,6 +1195,14 @@ func (c *Module) HostToolPath() android.OptionalPath {
 	return c.installer.hostToolPath()
 }
 
+
+func (c *Module) Srcs() android.Paths {
+	if c.outputFile.Valid() {
+		return android.Paths{c.outputFile.Path()}
+	}
+	return android.Paths{}
+}
+
 //
 // Defaults
 //
@@ -1194,6 +1227,7 @@ func DefaultsFactory(props ...interface{}) android.Module {
 	module.AddProperties(props...)
 	module.AddProperties(
 		&BaseProperties{},
+		&VendorProperties{},
 		&BaseCompilerProperties{},
 		&BaseLinkerProperties{},
 		&LibraryProperties{},
@@ -1233,21 +1267,35 @@ func vendorMutator(mctx android.BottomUpMutatorContext) {
 		return
 	}
 
+	if genrule, ok := mctx.Module().(*genrule.Module); ok {
+		if props, ok := genrule.Extra.(*VendorProperties); ok {
+			if !mctx.DeviceConfig().CompileVndk() {
+				mctx.CreateVariations(coreMode)
+			} else if Bool(props.Vendor_available) {
+				mctx.CreateVariations(coreMode, vendorMode)
+			} else if mctx.Vendor() {
+				mctx.CreateVariations(vendorMode)
+			} else {
+				mctx.CreateVariations(coreMode)
+			}
+		}
+	}
+
 	m, ok := mctx.Module().(*Module)
 	if !ok {
 		return
 	}
 
 	// Sanity check
-	if Bool(m.Properties.Vendor_available) && mctx.Vendor() {
+	if m.VendorProperties.Vendor_available != nil && mctx.Vendor() {
 		mctx.PropertyErrorf("vendor_available",
 			"doesn't make sense at the same time as `vendor: true` or `proprietary: true`")
 		return
 	}
 	if vndk := m.vndkdep; vndk != nil {
-		if vndk.isVndk() && !Bool(m.Properties.Vendor_available) {
+		if vndk.isVndk() && m.VendorProperties.Vendor_available == nil {
 			mctx.PropertyErrorf("vndk",
-				"has to define `vendor_available: true` to enable vndk")
+				"vendor_available must be set to either true or false when `vndk: {enabled: true}`")
 			return
 		}
 		if !vndk.isVndk() && vndk.isVndkSp() {
@@ -1265,7 +1313,7 @@ func vendorMutator(mctx android.BottomUpMutatorContext) {
 		// LL-NDK stubs only exist in the vendor variant, since the
 		// real libraries will be used in the core variant.
 		mctx.CreateVariations(vendorMode)
-	} else if Bool(m.Properties.Vendor_available) {
+	} else if m.hasVendorVariant() {
 		// This will be available in both /system and /vendor
 		// or a /system directory that is available to vendor.
 		mod := mctx.CreateVariations(coreMode, vendorMode)

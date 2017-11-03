@@ -43,10 +43,6 @@ type BaseLinkerProperties struct {
 	// list of module-specific flags that will be used for all link steps
 	Ldflags []string `android:"arch_variant"`
 
-	// don't insert default compiler flags into asflags, cflags,
-	// cppflags, conlyflags, ldflags, or include_dirs
-	No_default_compiler_flags *bool
-
 	// list of system libraries that will be dynamically linked to
 	// shared library and executable modules.  If unset, generally defaults to libc,
 	// libm, and libdl.  Set to [] to prevent linking against the defaults.
@@ -201,26 +197,50 @@ func (linker *baseLinker) linkerDeps(ctx BaseModuleContext, deps Deps) Deps {
 func (linker *baseLinker) linkerFlags(ctx ModuleContext, flags Flags) Flags {
 	toolchain := ctx.toolchain()
 
-	if !ctx.noDefaultCompilerFlags() {
-		if Bool(linker.Properties.Allow_undefined_symbols) {
-			if ctx.Darwin() {
-				// darwin defaults to treating undefined symbols as errors
-				flags.LdFlags = append(flags.LdFlags, "-Wl,-undefined,dynamic_lookup")
+	hod := "Host"
+	if ctx.Os().Class == android.Device {
+		hod = "Device"
+	}
+
+	if Bool(linker.Properties.Allow_undefined_symbols) {
+		if ctx.Darwin() {
+			// darwin defaults to treating undefined symbols as errors
+			flags.LdFlags = append(flags.LdFlags, "-Wl,-undefined,dynamic_lookup")
+		}
+	} else if !ctx.Darwin() {
+		flags.LdFlags = append(flags.LdFlags, "-Wl,--no-undefined")
+	}
+
+	if flags.Clang {
+		flags.LdFlags = append(flags.LdFlags, toolchain.ClangLdflags())
+	} else {
+		flags.LdFlags = append(flags.LdFlags, toolchain.Ldflags())
+	}
+	} else if !ctx.Darwin() {
+		flags.LdFlags = append(flags.LdFlags, "-Wl,--no-undefined")
+	}
+
+	if flags.Clang {
+		flags.LdFlags = append(flags.LdFlags, toolchain.ClangLdflags())
+	} else {
+		flags.LdFlags = append(flags.LdFlags, toolchain.Ldflags())
+
+	if !ctx.toolchain().Bionic() {
+		CheckBadHostLdlibs(ctx, "host_ldlibs", linker.Properties.Host_ldlibs)
+
+		flags.LdFlags = append(flags.LdFlags, linker.Properties.Host_ldlibs...)
+
+		if !ctx.Windows() {
+			// Add -ldl, -lpthread and -lrt to host builds to match the default behavior of device
+			// builds
+			flags.LdFlags = append(flags.LdFlags,
+				"-ldl",
+				"-lpthread",
+				"-lm",
+			)
+			if !ctx.Darwin() {
+				flags.LdFlags = append(flags.LdFlags, "-lrt")
 			}
-		} else if !ctx.Darwin() {
-			flags.LdFlags = append(flags.LdFlags, "-Wl,--no-undefined")
-		}
-
-		if flags.Clang {
-			flags.LdFlags = append(flags.LdFlags, toolchain.ClangLdflags())
-		} else {
-			flags.LdFlags = append(flags.LdFlags, toolchain.Ldflags())
-		}
-
-		if !ctx.toolchain().Bionic() {
-			CheckBadHostLdlibs(ctx, "host_ldlibs", linker.Properties.Host_ldlibs)
-
-			flags.LdFlags = append(flags.LdFlags, linker.Properties.Host_ldlibs...)
 		}
 	}
 
@@ -234,8 +254,10 @@ func (linker *baseLinker) linkerFlags(ctx ModuleContext, flags Flags) Flags {
 			rpath_prefix = "@loader_path/"
 		}
 
-		for _, rpath := range linker.dynamicProperties.RunPaths {
-			flags.LdFlags = append(flags.LdFlags, "-Wl,-rpath,"+rpath_prefix+rpath)
+		if !ctx.static() {
+			for _, rpath := range linker.dynamicProperties.RunPaths {
+				flags.LdFlags = append(flags.LdFlags, "-Wl,-rpath,"+rpath_prefix+rpath)
+			}
 		}
 	}
 
