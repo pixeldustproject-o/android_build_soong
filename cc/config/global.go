@@ -37,9 +37,19 @@ var (
 		"-Wno-instantiation-after-specialization",
 		"-Wno-max-unsigned-zero",
 
-		// COMMON_RELEASE_CFLAGS
+		// Make paths in deps files relative
+		"-no-canonical-prefixes",
+
 		"-DNDEBUG",
 		"-UDEBUG",
+
+		"-fno-exceptions",
+		"-Wno-multichar",
+
+		"-O2",
+		"-g",
+
+		"-fno-strict-aliasing",
 	}
 
 	commonGlobalConlyflags = []string{}
@@ -47,12 +57,21 @@ var (
 	deviceGlobalCflags = []string{
 		"-fdiagnostics-color",
 
-		// TARGET_ERROR_FLAGS
+		"-fno-canonical-system-headers",
+		"-ffunction-sections",
+		"-funwind-tables",
+		"-fstack-protector-strong",
+		"-Wa,--noexecstack",
+		"-D_FORTIFY_SOURCE=2",
+
+		"-Wstrict-aliasing=2",
+
 		"-Wno-error=return-type",
 		"-Wno-error=non-virtual-dtor",
 		"-Wno-error=address",
 		"-Wno-error=sequence-point",
 		"-Wno-error=date-time",
+		"-Werror=format-security",
 	}
 
 	hostGlobalCflags = []string{}

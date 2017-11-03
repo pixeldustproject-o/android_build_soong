@@ -22,29 +22,14 @@ import (
 
 var (
 	mipsCflags = []string{
-		"-fno-exceptions", // from build/core/combo/select.mk
-		"-Wno-multichar",  // from build/core/combo/select.mk
-		"-O2",
 		"-fomit-frame-pointer",
-		"-fno-strict-aliasing",
 		"-funswitch-loops",
 		"-U__unix",
 		"-U__unix__",
 		"-Umips",
-		"-ffunction-sections",
 		"-fdata-sections",
-		"-funwind-tables",
-		"-fstack-protector-strong",
-		"-Wa,--noexecstack",
-		"-Werror=format-security",
-		"-D_FORTIFY_SOURCE=2",
-		"-no-canonical-prefixes",
-		"-fno-canonical-system-headers",
 
 		// TARGET_RELEASE_CFLAGS
-		"-DNDEBUG",
-		"-g",
-		"-Wstrict-aliasing=2",
 		"-fgcse-after-reload",
 		"-frerun-cse-after-loop",
 		"-frename-registers",

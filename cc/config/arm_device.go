@@ -28,29 +28,18 @@ var (
 	}
 
 	armCflags = []string{
-		"-fno-exceptions", // from build/core/combo/select.mk
-		"-Wno-multichar",  // from build/core/combo/select.mk
-		"-ffunction-sections",
 		"-fdata-sections",
-		"-funwind-tables",
-		"-fstack-protector-strong",
-		"-Wa,--noexecstack",
-		"-Werror=format-security",
-		"-D_FORTIFY_SOURCE=2",
 		"-fno-short-enums",
-		"-no-canonical-prefixes",
-		"-fno-canonical-system-headers",
 
 		"-fno-builtin-sin",
 		"-fno-strict-volatile-bitfields",
 
 		// TARGET_RELEASE_CFLAGS
-		"-DNDEBUG",
-		"-g",
-		"-Wstrict-aliasing=2",
 		"-fgcse-after-reload",
 		"-frerun-cse-after-loop",
 		"-frename-registers",
+
+		"-fomit-frame-pointer",
 	}
 
 	armCppflags = []string{
@@ -71,8 +60,6 @@ var (
 	}
 
 	armArmCflags = []string{
-		"-O2",
-		"-fomit-frame-pointer",
 		"-fstrict-aliasing",
 		"-funswitch-loops",
 	}
@@ -80,8 +67,6 @@ var (
 	armThumbCflags = []string{
 		"-mthumb",
 		"-Os",
-		"-fomit-frame-pointer",
-		"-fno-strict-aliasing",
 	}
 
 	armArchVariantCflags = map[string][]string{
