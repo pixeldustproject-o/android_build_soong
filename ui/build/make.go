@@ -86,6 +86,10 @@ func runMakeProductConfig(ctx Context, config Config) {
 		"TARGET_BUILD_VARIANT",
 		"TARGET_BUILD_APPS",
 
+
+		"CLANG",
+		"CLANG_CXX",
+
 		// compiler wrappers set up by make
 		"CC_WRAPPER",
 		"CXX_WRAPPER",

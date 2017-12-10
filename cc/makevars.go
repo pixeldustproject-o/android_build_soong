@@ -35,7 +35,7 @@ func makeVarsProvider(ctx android.MakeVarsContext) {
 	ctx.Strict("CLANG", "${config.ClangBin}/clang")
 	ctx.Strict("CLANG_CXX", "${config.ClangBin}/clang++")
 	ctx.Strict("LLVM_AS", "${config.ClangBin}/llvm-as")
-	ctx.Strict("LLVM_LINK", "${config.ClangBin}/llvm-link")
+	ctx.Strict("LLVM_LINK", "${config.ClangBin}/lld-link")
 	ctx.Strict("PATH_TO_CLANG_TIDY", "${config.ClangBin}/clang-tidy")
 	ctx.StrictSorted("CLANG_CONFIG_UNKNOWN_CFLAGS", strings.Join(config.ClangUnknownCflags, " "))
 
@@ -45,7 +45,7 @@ func makeVarsProvider(ctx android.MakeVarsContext) {
 	ctx.Strict("RS_LLVM_INCLUDES", "${config.RSIncludePath}")
 	ctx.Strict("RS_CLANG", "${config.RSLLVMPrebuiltsPath}/clang")
 	ctx.Strict("RS_LLVM_AS", "${config.RSLLVMPrebuiltsPath}/llvm-as")
-	ctx.Strict("RS_LLVM_LINK", "${config.RSLLVMPrebuiltsPath}/llvm-link")
+	ctx.Strict("RS_LLVM_LINK", "${config.RSLLVMPrebuiltsPath}/lld-link")
 
 	ctx.Strict("GLOBAL_CFLAGS_NO_OVERRIDE", "${config.NoOverrideGlobalCflags}")
 	ctx.Strict("GLOBAL_CLANG_CFLAGS_NO_OVERRIDE", "${config.ClangExtraNoOverrideCflags}")
