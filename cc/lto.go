@@ -93,12 +93,6 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 
 		flags.CFlags = append(flags.CFlags, ltoFlag)
 		flags.LdFlags = append(flags.LdFlags, ltoFlag)
-		// TODO: use local USE_CLANG_LLD
-		if ctx.Device() && !ctx.AConfig().UseClangLld() {
-			// Work around bug in Clang that doesn't pass correct emulated
-			// TLS option to target
-			flags.LdFlags = append(flags.LdFlags, "-Wl,-plugin-opt,-emulated-tls")
-		}
 		flags.ArGoldPlugin = true
 	}
 	return flags
