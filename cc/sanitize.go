@@ -364,12 +364,6 @@ func (sanitize *sanitize) flags(ctx ModuleContext, flags Flags) Flags {
 		sanitizers = append(sanitizers, "cfi")
 		flags.CFlags = append(flags.CFlags, cfiCflags...)
 		flags.LdFlags = append(flags.LdFlags, cfiLdflags...)
-		// TODO: check local module USE_CLANG_LLD
-		if ctx.Device() && !ctx.AConfig().UseClangLld() {
-			// Work around a bug in Clang. The CFI sanitizer requires LTO, and when
-			// LTO is enabled, the Clang driver fails to enable emutls for Android.
-			flags.LdFlags = append(flags.LdFlags, "-Wl,-plugin-opt,-emulated-tls")
-		}
 		flags.ArGoldPlugin = true
 		if Bool(sanitize.Properties.Sanitize.Diag.Cfi) {
 			diagSanitizers = append(diagSanitizers, "cfi")
