@@ -84,7 +84,7 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 			// TLS option to target
 			flags.LdFlags = append(flags.LdFlags, "-Wl,-plugin-opt,-emulated-tls")
 		}
-		flags.ArFlags = append(flags.ArFlags, " --plugin ${config.LLVMGoldPlugin}")
+		flags.ArGoldPlugin = true
 	}
 	return flags
 }
