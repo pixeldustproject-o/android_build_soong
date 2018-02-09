@@ -39,7 +39,6 @@ var (
 	// FIXME: revert the __cfi_check flag when clang is updated to r280031.
 	cfiLdflags = []string{"-flto", "-fsanitize-cfi-cross-dso", "-fsanitize=cfi",
 		"-Wl,-plugin-opt,O1 -Wl,-export-dynamic-symbol=__cfi_check"}
-	cfiArflags = []string{"--plugin ${config.ClangBin}/../lib/LLVMgold.so"}
 
 	intOverflowCflags = []string{"-fsanitize-blacklist=build/soong/cc/config/integer_overflow_blacklist.txt"}
 )
@@ -371,7 +370,7 @@ func (sanitize *sanitize) flags(ctx ModuleContext, flags Flags) Flags {
 			// LTO is enabled, the Clang driver fails to enable emutls for Android.
 			flags.LdFlags = append(flags.LdFlags, "-Wl,-plugin-opt,-emulated-tls")
 		}
-		flags.ArFlags = append(flags.ArFlags, cfiArflags...)
+		flags.ArGoldPlugin = true
 		if Bool(sanitize.Properties.Sanitize.Diag.Cfi) {
 			diagSanitizers = append(diagSanitizers, "cfi")
 		}
