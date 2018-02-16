@@ -86,7 +86,8 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 		} else {
 			ltoFlag = "-flto"
 		}
-		if lto.useClangLld(ctx) && Bool(lto.Properties.Lto.Thin) {
+               if !ctx.AConfig().IsEnvTrue("DISABLE_THINLTO_CACHE") &&
+                    lto.useClangLld(ctx) && Bool(lto.Properties.Lto.Thin) {
 			// Set appropriate ThinLTO cache policy
 			cacheDirFormat := "-Wl,--thinlto-cache-dir="
 			outDir := ctx.AConfig().Getenv("OUT_DIR")
@@ -96,7 +97,8 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 			cachePolicyFormat := "-Wl,--thinlto-cache-policy,"
 			policy := "cache_size=10%:cache_size_bytes=10g"
 			flags.LdFlags = append(flags.LdFlags, cachePolicyFormat+policy)
-		} else if !lto.useClangLld(ctx) && Bool(lto.Properties.Lto.Thin) {
+               } else if !ctx.AConfig().IsEnvTrue("DISABLE_THINLTO_CACHE") &&
+                    !lto.useClangLld(ctx) && Bool(lto.Properties.Lto.Thin) {
 			// Set appropriate ThinLTO cache policy
 			cacheDirFormat := "-Wl,-plugin-opt,cache-dir="
 			outDir := ctx.AConfig().Getenv("OUT_DIR")
