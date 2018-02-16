@@ -73,6 +73,18 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 		var ltoFlag string
 		if Bool(lto.Properties.Lto.Thin) {
 			ltoFlag = "-flto=thin"
+
+			// Set appropriate ThinLTO cache policy
+			cacheDirFormat := "-Wl,-plugin-opt,cache-dir="
+			outDir := ctx.AConfig().Getenv("OUT_DIR")
+			cacheDir := outDir + "/soong/thinlto-cache"
+			flags.LdFlags = append(flags.LdFlags, cacheDirFormat+cacheDir)
+
+			// Limit the size of the ThinLTO cache to the lesser of 10% of available
+			// disk space and 10GB.
+			cachePolicyFormat := "-Wl,-plugin-opt,cache-policy="
+			policy := "cache_size=10%:cache_size_bytes=10g"
+			flags.LdFlags = append(flags.LdFlags, cachePolicyFormat+policy)
 		} else {
 			ltoFlag = "-flto"
 		}
