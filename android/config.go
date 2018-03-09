@@ -465,6 +465,10 @@ func (c *config) UseGoma() bool {
 	return Bool(c.ProductVariables.UseGoma)
 }
 
+func (c *config) UseClangLld() bool {
+	return Bool(c.ProductVariables.UseClangLld)
+}
+
 func (c *config) ClangTidy() bool {
 	return Bool(c.ProductVariables.ClangTidy)
 }

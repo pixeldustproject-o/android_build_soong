@@ -127,6 +127,7 @@ func init() {
 			"LOCAL_TIDY":                    "tidy",
 			"LOCAL_PROPRIETARY_MODULE":      "proprietary",
 			"LOCAL_VENDOR_MODULE":           "vendor",
+			"LOCAL_USE_CLANG_LLD":            "use_clang_lld",
 
 			"LOCAL_EXPORT_PACKAGE_RESOURCES": "export_package_resources",
 		})

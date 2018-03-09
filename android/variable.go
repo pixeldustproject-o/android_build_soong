@@ -172,6 +172,8 @@ type productVariables struct {
 
 	VendorPath *string `json:",omitempty"`
 
+	UseClangLld *bool `json:",omitempty"`
+
 	ClangTidy  *bool   `json:",omitempty"`
 	TidyChecks *string `json:",omitempty"`
 

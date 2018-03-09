@@ -40,14 +40,14 @@ var (
 	x86Cppflags = []string{}
 
 	x86Ldflags = []string{
-		"-Wl,-z,noexecstack",
-		"-Wl,-z,relro",
-		"-Wl,-z,now",
-		"-Wl,--build-id=md5",
-		"-Wl,--warn-shared-textrel",
-		"-Wl,--fatal-warnings",
 		"-Wl,--hash-style=gnu",
-		"-Wl,--no-undefined-version",
+	}
+
+	// Using lld's gnu or sysv hash style alone will fail at boot,
+	// rejected by Android's bionic dynamic linker.
+	x86Lldflags = []string{
+		"-Wl,--hash-style=both",
+		"-fuse-ld=lld",
 	}
 
 	x86ArchVariantCflags = map[string][]string{
@@ -161,12 +161,14 @@ func init() {
 
 	pctx.StaticVariable("X86Cflags", strings.Join(x86Cflags, " "))
 	pctx.StaticVariable("X86Ldflags", strings.Join(x86Ldflags, " "))
+	pctx.StaticVariable("X86Lldflags", strings.Join(x86Lldflags, " "))
 	pctx.StaticVariable("X86Cppflags", strings.Join(x86Cppflags, " "))
 	pctx.StaticVariable("X86IncludeFlags", bionicHeaders("x86", "x86"))
 
 	// Clang cflags
 	pctx.StaticVariable("X86ClangCflags", strings.Join(ClangFilterUnknownCflags(x86ClangCflags), " "))
 	pctx.StaticVariable("X86ClangLdflags", strings.Join(ClangFilterUnknownCflags(x86Ldflags), " "))
+	pctx.StaticVariable("X86ClangLldflags", strings.Join(ClangFilterUnknownCflags(x86Lldflags), " "))
 	pctx.StaticVariable("X86ClangCppflags", strings.Join(ClangFilterUnknownCflags(x86Cppflags), " "))
 
 	// Yasm flags
@@ -249,6 +251,10 @@ func (t *toolchainX86) ClangCppflags() string {
 
 func (t *toolchainX86) ClangLdflags() string {
 	return "${config.X86Ldflags}"
+}
+
+func (t *toolchainX86) ClangLldflags() string {
+	return "${config.X86Lldflags}"
 }
 
 func (t *toolchainX86) YasmFlags() string {
