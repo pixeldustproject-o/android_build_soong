@@ -47,14 +47,7 @@ var (
 	}
 
 	mips64Ldflags = []string{
-		"-Wl,-z,noexecstack",
-		"-Wl,-z,relro",
-		"-Wl,-z,now",
-		"-Wl,--build-id=md5",
-		"-Wl,--warn-shared-textrel",
-		"-Wl,--fatal-warnings",
 		"-Wl,--allow-shlib-undefined",
-		"-Wl,--no-undefined-version",
 	}
 
 	mips64ArchVariantCflags = map[string][]string{
@@ -172,6 +165,10 @@ func (t *toolchainMips64) ClangCppflags() string {
 
 func (t *toolchainMips64) ClangLdflags() string {
 	return "${config.Mips64ClangLdflags}"
+}
+
+func (t *toolchainMips64) ClangLldflags() string {
+	return "${config.Mips64ClangLdflags}" // TODO
 }
 
 func (toolchainMips64) SanitizerRuntimeLibraryArch() string {

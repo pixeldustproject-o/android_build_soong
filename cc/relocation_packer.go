@@ -56,6 +56,14 @@ func (p *relocationPacker) packingInit(ctx BaseModuleContext) {
 	if ctx.AConfig().Getenv("DISABLE_RELOCATION_PACKER") == "true" {
 		enabled = false
 	}
+	// Relocation packer does not work with lld output files yet.
+	// Packed files won't load.
+	// TODO: use LOCAL_USE_CLANG_LLD
+	// Maybe we should keep LOCAL_USE_CLANG_LLD and DISABLE_RELOCATION_PACKER
+	// separate.
+	if ctx.AConfig().UseClangLld() {
+		enabled = false
+	}
 	if ctx.sdk() {
 		enabled = false
 	}

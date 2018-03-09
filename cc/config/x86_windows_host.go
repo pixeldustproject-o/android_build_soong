@@ -184,6 +184,10 @@ func (t *toolchainWindows) ClangLdflags() string {
 	panic("Clang is not supported under mingw")
 }
 
+func (t *toolchainWindows) ClangLldflags() string { // TODO
+	panic("Clang is not supported under mingw")
+}
+
 func (t *toolchainWindows) ShlibSuffix() string {
 	return ".dll"
 }

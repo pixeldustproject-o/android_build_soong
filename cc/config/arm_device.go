@@ -47,16 +47,32 @@ var (
 	}
 
 	armLdflags = []string{
-		"-Wl,-z,noexecstack",
-		"-Wl,-z,relro",
-		"-Wl,-z,now",
-		"-Wl,--build-id=md5",
-		"-Wl,--warn-shared-textrel",
-		"-Wl,--fatal-warnings",
 		"-Wl,--icf=safe",
 		"-Wl,--hash-style=gnu",
-		"-Wl,--no-undefined-version",
 		"-Wl,-m,armelf",
+	}
+
+	armLdflagsFixCortexA8 = []string{
+		"-Wl,--icf=safe",
+		"-Wl,--hash-style=gnu",
+		"-Wl,-m,armelf",
+		"-Wl,--fix-cortex-a8",
+	}
+
+	armLdflagsNoFixCortexA8 = []string{
+		"-Wl,--icf=safe",
+		"-Wl,--hash-style=gnu",
+		"-Wl,-m,armelf",
+		"-Wl,--no-fix-cortex-a8",
+	}
+
+	// Using lld's gnu or sysv hash style alone will fail at boot,
+	// rejected by Android's bionic dynamic linker.
+	// lld does not have --icf=safe or --fix-cortex-a8 flags.
+	armLldflags = []string{
+		"-Wl,--hash-style=both",
+		"-Wl,-m,armelf",
+		"-fuse-ld=lld",
 	}
 
 	armArmCflags = []string{
@@ -201,6 +217,12 @@ func init() {
 	pctx.StaticVariable("ArmToolchainCflags", strings.Join(armToolchainCflags, " "))
 	pctx.StaticVariable("ArmCflags", strings.Join(armCflags, " "))
 	pctx.StaticVariable("ArmLdflags", strings.Join(armLdflags, " "))
+	pctx.StaticVariable("ArmLdflagsFixCortexA8", strings.Join(armLdflagsFixCortexA8, " "))
+	pctx.StaticVariable("ArmLdflagsNoFixCortexA8", strings.Join(armLdflagsNoFixCortexA8, " "))
+	// LLD does not accept fix-cortex-a8
+	pctx.StaticVariable("ArmLldflags", strings.Join(armLldflags, " "))
+	pctx.StaticVariable("ArmLldflagsFixCortexA8", strings.Join(armLldflags, " "))
+	pctx.StaticVariable("ArmLldflagsNoFixCortexA8", strings.Join(armLldflags, " "))
 	pctx.StaticVariable("ArmCppflags", strings.Join(armCppflags, " "))
 	pctx.StaticVariable("ArmIncludeFlags", bionicHeaders("arm", "arm"))
 
@@ -230,6 +252,7 @@ func init() {
 	pctx.StaticVariable("ArmToolchainClangCflags", strings.Join(ClangFilterUnknownCflags(armToolchainCflags), " "))
 	pctx.StaticVariable("ArmClangCflags", strings.Join(ClangFilterUnknownCflags(armCflags), " "))
 	pctx.StaticVariable("ArmClangLdflags", strings.Join(ClangFilterUnknownCflags(armLdflags), " "))
+	pctx.StaticVariable("ArmClangLldflags", strings.Join(ClangFilterUnknownCflags(armLldflags), " "))
 	pctx.StaticVariable("ArmClangCppflags", strings.Join(ClangFilterUnknownCflags(armCppflags), " "))
 
 	// Clang ARM vs. Thumb instruction set cflags
@@ -312,6 +335,7 @@ var (
 type toolchainArm struct {
 	toolchain32Bit
 	ldflags                               string
+	lldflags                              string
 	toolchainCflags, toolchainClangCflags string
 }
 
@@ -382,6 +406,10 @@ func (t *toolchainArm) ClangLdflags() string {
 	return t.ldflags
 }
 
+func (t *toolchainArm) ClangLldflags() string {
+	return t.lldflags
+}
+
 func (t *toolchainArm) ClangInstructionSetFlags(isa string) (string, error) {
 	switch isa {
 	case "arm":
@@ -417,12 +445,12 @@ func armToolchainFactory(arch android.Arch) Toolchain {
 		switch arch.CpuVariant {
 		case "cortex-a8", "":
 			// Generic ARM might be a Cortex A8 -- better safe than sorry
-			fixCortexA8 = "-Wl,--fix-cortex-a8"
+			fixCortexA8 = "FixCortexA8"
 		default:
-			fixCortexA8 = "-Wl,--no-fix-cortex-a8"
+			fixCortexA8 = "NoFixCortexA8"
 		}
 	case "armv7-a":
-		fixCortexA8 = "-Wl,--fix-cortex-a8"
+		fixCortexA8 = "FixCortexA8"
 	case "armv5te":
 		// Nothing extra for armv5te
 	case "armv8-a":
@@ -432,11 +460,9 @@ func armToolchainFactory(arch android.Arch) Toolchain {
 	}
 
 	return &toolchainArm{
-		toolchainCflags: strings.Join(toolchainCflags, " "),
-		ldflags: strings.Join([]string{
-			"${config.ArmLdflags}",
-			fixCortexA8,
-		}, " "),
+		toolchainCflags:      strings.Join(toolchainCflags, " "),
+		ldflags:              "${config.ArmLdflags" + fixCortexA8 + "}",
+		lldflags:             "${config.ArmLldflags" + fixCortexA8 + "}",
 		toolchainClangCflags: strings.Join(toolchainClangCflags, " "),
 	}
 }
