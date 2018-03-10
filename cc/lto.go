@@ -51,6 +51,9 @@ type LTOProperties struct {
 	// since it is an object dependency of an LTO module.
 	FullDep bool `blueprint:"mutated"`
 	ThinDep bool `blueprint:"mutated"`
+
+	// Use clang lld instead of gnu ld.
+	Use_clang_lld *bool
 }
 
 type lto struct {
@@ -68,27 +71,42 @@ func (lto *lto) deps(ctx BaseModuleContext, deps Deps) Deps {
 	return deps
 }
 
+func (lto *lto) useClangLld(ctx BaseModuleContext) bool {
+	if lto.Properties.Use_clang_lld != nil {
+		return Bool(lto.Properties.Use_clang_lld)
+	}
+	return ctx.AConfig().UseClangLld()
+}
+
 func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 	if lto.LTO() {
 		var ltoFlag string
 		if Bool(lto.Properties.Lto.Thin) {
 			ltoFlag = "-flto=thin"
-
+		} else {
+			ltoFlag = "-flto"
+		}
+		if lto.useClangLld(ctx) && Bool(lto.Properties.Lto.Thin) {
+			// Set appropriate ThinLTO cache policy
+			cacheDirFormat := "-Wl,--thinlto-cache-dir="
+			outDir := ctx.AConfig().Getenv("OUT_DIR")
+			cacheDir := outDir + "/soong/thinlto-cache"
+			flags.LdFlags = append(flags.LdFlags, cacheDirFormat+cacheDir)
+			// Limit the size of the ThinLTO cache
+			cachePolicyFormat := "-Wl,--thinlto-cache-policy,"
+			policy := "cache_size=10%:cache_size_bytes=10g"
+			flags.LdFlags = append(flags.LdFlags, cachePolicyFormat+policy)
+		} else if !lto.useClangLld(ctx) && Bool(lto.Properties.Lto.Thin) {
 			// Set appropriate ThinLTO cache policy
 			cacheDirFormat := "-Wl,-plugin-opt,cache-dir="
 			outDir := ctx.AConfig().Getenv("OUT_DIR")
 			cacheDir := outDir + "/soong/thinlto-cache"
 			flags.LdFlags = append(flags.LdFlags, cacheDirFormat+cacheDir)
-
-			// Limit the size of the ThinLTO cache to the lesser of 10% of available
-			// disk space and 10GB.
+			// Limit the size of the ThinLTO cache
 			cachePolicyFormat := "-Wl,-plugin-opt,cache-policy="
 			policy := "cache_size=10%:cache_size_bytes=10g"
 			flags.LdFlags = append(flags.LdFlags, cachePolicyFormat+policy)
-		} else {
-			ltoFlag = "-flto"
 		}
-
 		flags.CFlags = append(flags.CFlags, ltoFlag)
 		flags.LdFlags = append(flags.LdFlags, ltoFlag)
 		flags.ArGoldPlugin = true
