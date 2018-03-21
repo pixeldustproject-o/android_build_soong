@@ -201,8 +201,8 @@ func init() {
 		}
 		return "7.0", nil
 	})
-	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib/clang/7.0.0/lib/linux")
-	pctx.StaticVariable("LLVMGoldPlugin", "${ClangPath}/lib/LLVMgold.so")
+	pctx.StaticVariable("ClangAsanLibDir", "${ClangPath}/lib64/clang/7.0.0/lib/linux")
+	pctx.StaticVariable("LLVMGoldPlugin", "${ClangPath}/lib64/LLVMgold.so")
 
 	// These are tied to the version of LLVM directly in external/llvm, so they might trail the host prebuilts
 	// being used for the rest of the build process.
@@ -210,7 +210,7 @@ func init() {
 	pctx.SourcePathVariable("RSClangVersion", "7.0")
 	pctx.SourcePathVariable("RSReleaseVersion", "7.0")
 	pctx.StaticVariable("RSLLVMPrebuiltsPath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/bin")
-	pctx.StaticVariable("RSIncludePath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/lib/clang/7.0.0/include")
+	pctx.StaticVariable("RSIncludePath", "${RSClangBase}/${HostPrebuiltTag}/${RSClangVersion}/lib64/clang/7.0.0/include")
 
 	pctx.PrefixedExistentPathsForSourcesVariable("RsGlobalIncludes", "-I",
 		[]string{
