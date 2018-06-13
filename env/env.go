@@ -74,10 +74,6 @@ func StaleEnvFile(filename string) (bool, error) {
 	}
 
 	if len(changed) > 0 {
-		fmt.Printf("environment variables changed value:\n")
-		for _, s := range changed {
-			fmt.Printf("   %s\n", s)
-		}
 		return true, nil
 	}
 
